@@ -15,6 +15,7 @@ const timeSelector = "a.movie-seances__time:not(.acceptin-button-disabled)"; //�
 const rowSelector = ".buying-scheme__row"; //ряд
 const chairSelector = ".buying-scheme__chair"; // стул
 const buttonSelector = "button.acceptin-button"; //кнопка
+const takenSelector = "buying-scheme__chair_taken"; // !БЕЗ ТОЧКИ, класс занятого стула
 
 beforeEach(async () => {
   page = await browser.newPage();
@@ -31,11 +32,12 @@ describe("Ticket Booking Test", () => {
   });
 
   //----------------------------------
-  test.only("Positive test. Booking by row and chair", async () => {
+  test("Positive test. Booking by row and chair", async () => {
     const day = 3; // день(от 0 до 6)
     const time = 4; // время(начиная с 0)
-    const row = 1; // ряд (начиная с 0)
-    const chair = 1; // место (начиная с 0)
+    const row = 2; // ряд (начиная с 0)
+    const chair = 8; // место (начиная с 0)
+    const flagTaken = true; // true - пропускать занятые стулья
 
     const dayOfWeek = await selectOneElement(page, daySelector, day); //День недели
     console.log("Дата сеанса : " + (await dayOfWeek.evaluate((el) => el.textContent)));
@@ -47,22 +49,28 @@ describe("Ticket Booking Test", () => {
 
     await page.waitForNavigation(); //Ждём смены страницы
 
-    const selectedChair = await selectChair(page, row, rowSelector, chair, chairSelector); //Выбранный ряд и место
-    // console.log(
-    //   "Классы стула из net.test.js: " +
-    //     (await selectedChair.evaluate((el) => el.classList.contains("buying-scheme__chair_taken")))
-    // );
-    //buying-scheme__chair buying-scheme__chair_standart buying-scheme__chair_taken
-    await selectedChair.click();
+    const selectedSeat = await selectChair(
+      page,
+      row,
+      rowSelector,
+      chair,
+      chairSelector,
+      flagTaken,
+      takenSelector
+    ); //Место определённое по ряду и стулу
+
+    await selectedSeat.click();
+    //await page.waitForTimeout(1_000);
 
     await page.click(buttonSelector);
-    await page.waitForNavigation(); //Ждём смены страницы
+    //await page.waitForNavigation(); //Ждём смены страницы
+    await page.waitForTimeout(1_000);
 
     await page.waitForSelector(buttonSelector);
     const actual = await getText(page, buttonSelector);
     await expect(actual).toContain("Получить код бронирования");
     await page.click(buttonSelector); // Без этого не уходит со страницы в следующем тесте
-  });
+  }, 120_000); // таймаут теста 120 сек.
 
   //----------------------------------
   test("Positive test. Booking by selected parameters", async () => {
